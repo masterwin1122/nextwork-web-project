@@ -4,7 +4,7 @@ env:
   variables:
     CODEARTIFACT_DOMAIN: network
     CODEARTIFACT_DOMAIN_OWNER: "767044641724"
-    CODEARTIFACT_REPO: nextwork-devops-cicd   # <-- use your repo name here
+    CODEARTIFACT_REPO: nextwork-devops-cicd
     AWS_DEFAULT_REGION: eu-central-1
 
 phases:
@@ -13,13 +13,16 @@ phases:
       java: corretto8
   pre_build:
     commands:
+      - set -euxo pipefail
       - echo "Java:" && java -version
       - echo "Maven:" && mvn -v
+      # Get CodeArtifact token
       - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
-          --domain $CODEARTIFACT_DOMAIN \
-          --domain-owner $CODEARTIFACT_DOMAIN_OWNER \
+          --domain "$CODEARTIFACT_DOMAIN" \
+          --domain-owner "$CODEARTIFACT_DOMAIN_OWNER" \
           --query authorizationToken --output text \
-          --region $AWS_DEFAULT_REGION)
+          --region "$AWS_DEFAULT_REGION")
+      # Minimal Maven settings that reference the token
       - mkdir -p ~/.m2
       - |
         cat > ~/.m2/settings.xml <<'XML'
@@ -34,9 +37,10 @@ phases:
         </settings>
         XML
       - CA_URL="https://${CODEARTIFACT_DOMAIN}-${CODEARTIFACT_DOMAIN_OWNER}.d.codeartifact.${AWS_DEFAULT_REGION}.amazonaws.com/maven/${CODEARTIFACT_REPO}/"
+      - echo "Publishing to: $CA_URL"
   build:
     commands:
-      - mvn -DskipTests -s ~/.m2/settings.xml \
+      - mvn -B -DskipTests -s ~/.m2/settings.xml \
           -DaltDeploymentRepository=codeartifact::default::"$CA_URL" \
           clean package deploy
   post_build:
