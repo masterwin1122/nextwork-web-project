@@ -9,3 +9,6 @@ target/
 *.iml
 .DS_Store
 Thumbs.db
+target/
+aws/
+awscliv2.zip
