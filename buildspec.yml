@@ -14,7 +14,7 @@ phases:
   pre_build:
     commands:
       - set -euxo pipefail
-      - aws sts get-caller-identity
+      - echo "Caller:" && aws sts get-caller-identity
       - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
           --domain "$CODEARTIFACT_DOMAIN" \
           --domain-owner "$CODEARTIFACT_DOMAIN_OWNER" \
@@ -39,15 +39,22 @@ phases:
       - echo "Maven:" && mvn -v
   build:
     commands:
-      - echo "Starting Maven build + deploy…"
-      - mvn -B -e -X -DskipTests -s ~/.m2/settings.xml \
+      - mvn -B -DskipTests clean package
+      - echo "WARs found:"; find . -type f -name "*.war" -ls || true
+      # Try to publish to CodeArtifact BUT do not fail the build if this part is unauthorized:
+      - set +e
+      - mvn -B -DskipTests -s ~/.m2/settings.xml \
           -DaltDeploymentRepository=codeartifact::default::"$CA_URL" \
-          clean package deploy
+          deploy
+      - DEPLOY_RC=$?
+      - set -e
+      - if [ $DEPLOY_RC -ne 0 ]; then echo "WARN: CodeArtifact deploy failed (non-blocking)."; fi
   post_build:
     commands:
       - echo "Build finished on $(date)"
 
 artifacts:
   files:
-    - target/*.war
+    - '**/target/*.war'
   discard-paths: true
+
