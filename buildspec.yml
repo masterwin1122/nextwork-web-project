@@ -39,9 +39,13 @@ phases:
       - echo "Maven:" && mvn -v
   build:
     commands:
-      - mvn -B -DskipTests -s ~/.m2/settings.xml \
+      - echo "Starting Maven build + deploy…"
+      - mvn -B -e -X -DskipTests -s ~/.m2/settings.xml \
           -DaltDeploymentRepository=codeartifact::default::"$CA_URL" \
           clean package deploy
+  post_build:
+    commands:
+      - echo "Build finished on $(date)"
 
 artifacts:
   files:
