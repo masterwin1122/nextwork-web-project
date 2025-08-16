@@ -14,15 +14,12 @@ phases:
   pre_build:
     commands:
       - set -euxo pipefail
-      - echo "Java:" && java -version
-      - echo "Maven:" && mvn -v
-      # Get CodeArtifact token
+      - aws sts get-caller-identity
       - export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
           --domain "$CODEARTIFACT_DOMAIN" \
           --domain-owner "$CODEARTIFACT_DOMAIN_OWNER" \
           --query authorizationToken --output text \
           --region "$AWS_DEFAULT_REGION")
-      # Minimal Maven settings that reference the token
       - mkdir -p ~/.m2
       - |
         cat > ~/.m2/settings.xml <<'XML'
@@ -37,15 +34,14 @@ phases:
         </settings>
         XML
       - CA_URL="https://${CODEARTIFACT_DOMAIN}-${CODEARTIFACT_DOMAIN_OWNER}.d.codeartifact.${AWS_DEFAULT_REGION}.amazonaws.com/maven/${CODEARTIFACT_REPO}/"
-      - echo "Publishing to: $CA_URL"
+      - echo "CA_URL=$CA_URL"
+      - echo "Java:" && java -version
+      - echo "Maven:" && mvn -v
   build:
     commands:
       - mvn -B -DskipTests -s ~/.m2/settings.xml \
           -DaltDeploymentRepository=codeartifact::default::"$CA_URL" \
           clean package deploy
-  post_build:
-    commands:
-      - echo "Build finished on $(date)"
 
 artifacts:
   files:
