@@ -1,4 +1,3 @@
-
 version: 0.2
 
 env:
@@ -52,4 +51,3 @@ artifacts:
   files:
     - target/*.war
   discard-paths: true
-e the YAML above exactly)
